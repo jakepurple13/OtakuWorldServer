@@ -7,18 +7,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
-@Serializable
-data class ExposedUser(val name: String, val age: Int)
 
 class UserService(database: Database) {
-    object Users : Table() {
-        val id = integer("id").autoIncrement()
-        val name = varchar("name", length = 50)
-        val age = integer("age")
-
-        override val primaryKey = PrimaryKey(id)
-    }
-
     object DbModels : Table() {
         val url = varchar("url", length = 200)
         val title = varchar("title", length = 200)
@@ -32,17 +22,18 @@ class UserService(database: Database) {
         override val primaryKey: PrimaryKey = PrimaryKey(url)
     }
 
-    init {
-        transaction(database) {
-            SchemaUtils.create(Users, DbModels)
-        }
+    object ChapterWatchedModels : Table() {
+        val url = varchar("url", length = 200)
+        val name = varchar("name", length = 200)
+        val favoriteUrl = varchar("favoriteUrl", length = 200)
+
+        override val primaryKey: PrimaryKey = PrimaryKey(url)
     }
 
-    suspend fun create(user: ExposedUser): Int = dbQuery {
-        Users.insert {
-            it[name] = user.name
-            it[age] = user.age
-        }[Users.id]
+    init {
+        transaction(database) {
+            SchemaUtils.create(DbModels, ChapterWatchedModels)
+        }
     }
 
     suspend fun create(model: DbModel) = dbQuery {
@@ -76,28 +67,42 @@ class UserService(database: Database) {
             }
     }
 
-    suspend fun read(id: Int): ExposedUser? {
+    suspend fun deleteModel(url: String) = dbQuery {
+        DbModels.deleteWhere { DbModels.url eq url }
+    }
+
+    /*suspend fun read(id: Int): ExposedUser? {
         return dbQuery {
             Users.selectAll()
                 .where { Users.id eq id }
                 .map { ExposedUser(it[Users.name], it[Users.age]) }
                 .singleOrNull()
         }
+    }*/
+
+    suspend fun addChapterWatched(chapterWatched: ChapterWatched) = dbQuery {
+        ChapterWatchedModels.upsert {
+            it[url] = chapterWatched.url
+            it[name] = chapterWatched.name
+            it[favoriteUrl] = chapterWatched.favoriteUrl
+        }[ChapterWatchedModels.url]
     }
 
-    suspend fun update(id: Int, user: ExposedUser) {
-        dbQuery {
-            Users.update({ Users.id eq id }) {
-                it[name] = user.name
-                it[age] = user.age
+    suspend fun getChapterWatched(favoriteUrl: String): List<ChapterWatched> = dbQuery {
+        ChapterWatchedModels
+            .selectAll()
+            .where { ChapterWatchedModels.favoriteUrl eq favoriteUrl }
+            .map {
+                ChapterWatched(
+                    it[ChapterWatchedModels.url],
+                    it[ChapterWatchedModels.name],
+                    it[ChapterWatchedModels.favoriteUrl]
+                )
             }
-        }
     }
 
-    suspend fun delete(id: Int) {
-        dbQuery {
-            Users.deleteWhere { Users.id.eq(id) }
-        }
+    suspend fun removeChapterWatched(url: String) = dbQuery {
+        ChapterWatchedModels.deleteWhere { ChapterWatchedModels.url eq url }
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
@@ -114,4 +119,11 @@ data class DbModel(
     val numChapters: Int,
     val shouldCheckForUpdate: Boolean,
     val type: String,
+)
+
+@Serializable
+data class ChapterWatched(
+    val url: String,
+    val name: String,
+    val favoriteUrl: String,
 )
