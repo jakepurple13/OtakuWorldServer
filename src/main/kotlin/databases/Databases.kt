@@ -13,6 +13,7 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Application.configureDatabases() {
+    //Modify this for choice of database and where it is located
     val database = Database.connect(
         url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
         user = "root",
@@ -30,6 +31,12 @@ fun Application.configureDatabases() {
     }
 
     routing {
+        //Use this for authentication
+        /*authenticate {
+            favorites(UserService(database))
+            lists(ListSchema(database))
+        }*/
+
         favorites(UserService(database))
         lists(ListSchema(database))
     }
@@ -39,6 +46,12 @@ private fun Routing.lists(listSchema: ListSchema) {
     post("/otaku/lists") {
         val list = call.receive<CustomListItem>()
         listSchema.createList(list)
+        call.respond(HttpStatusCode.Created)
+    }
+
+    post("/otaku/lists/item") {
+        val list = call.receive<CustomListInfo>()
+        listSchema.addItem(list)
         call.respond(HttpStatusCode.Created)
     }
 
