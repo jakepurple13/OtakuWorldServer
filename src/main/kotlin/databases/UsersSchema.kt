@@ -1,14 +1,10 @@
-package com.programmersbox.otakuworld
+package com.programmersbox.otakuworld.databases
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.transactions.transaction
 
-
-class UserService(database: Database) {
+class UserService(database: Database) : GenericSchema() {
     object DbModels : Table() {
         val url = varchar("url", length = 200)
         val title = varchar("title", length = 200)
@@ -28,12 +24,6 @@ class UserService(database: Database) {
         val favoriteUrl = varchar("favoriteUrl", length = 200)
 
         override val primaryKey: PrimaryKey = PrimaryKey(url)
-    }
-
-    init {
-        transaction(database) {
-            SchemaUtils.create(DbModels, ChapterWatchedModels)
-        }
     }
 
     suspend fun create(model: DbModel) = dbQuery {
@@ -104,9 +94,6 @@ class UserService(database: Database) {
     suspend fun removeChapterWatched(url: String) = dbQuery {
         ChapterWatchedModels.deleteWhere { ChapterWatchedModels.url eq url }
     }
-
-    private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
 }
 
 @Serializable

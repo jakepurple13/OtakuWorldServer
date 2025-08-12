@@ -1,5 +1,6 @@
 package com.programmersbox.otakuworld
 
+import com.programmersbox.otakuworld.databases.configureDatabases
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {
