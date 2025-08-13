@@ -60,6 +60,24 @@ class UserService : GenericSchema() {
             }
     }
 
+    suspend fun getFavorite(url: String) = dbQuery {
+        DbModels
+            .selectAll()
+            .where { DbModels.url eq url }
+            .map {
+                DbModel(
+                    it[DbModels.title],
+                    it[DbModels.description],
+                    it[DbModels.url],
+                    it[DbModels.imageUrl],
+                    it[DbModels.sources],
+                    it[DbModels.numChapters],
+                    it[DbModels.shouldCheckForUpdate],
+                    it[DbModels.type]
+                )
+            }
+    }
+
     suspend fun deleteModel(url: String) = dbQuery {
         DbModels.deleteWhere { DbModels.url eq url }
     }
@@ -85,6 +103,19 @@ class UserService : GenericSchema() {
         ChapterWatchedModels
             .selectAll()
             .where { ChapterWatchedModels.favoriteUrl eq favoriteUrl }
+            .map {
+                ChapterWatched(
+                    it[ChapterWatchedModels.url],
+                    it[ChapterWatchedModels.name],
+                    it[ChapterWatchedModels.favoriteUrl]
+                )
+            }
+    }
+
+    suspend fun getChapterWatchedUrl(url: String) = dbQuery {
+        ChapterWatchedModels
+            .selectAll()
+            .where { ChapterWatchedModels.url eq url }
             .map {
                 ChapterWatched(
                     it[ChapterWatchedModels.url],

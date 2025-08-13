@@ -125,6 +125,36 @@ class ListSchema : GenericSchema() {
 
         list.map { CustomList(it, items.filter { i -> i.uuid == it.uuid }) }*/
     }
+
+    suspend fun getListByUuid(uuid: String) = dbQuery {
+        CustomListItemModel
+            .selectAll()
+            .where { CustomListItemModel.uuid eq uuid }
+            .map {
+                CustomList(
+                    item = CustomListItem(
+                        uuid = it[CustomListItemModel.uuid],
+                        name = it[CustomListItemModel.name],
+                        time = it[CustomListItemModel.time],
+                        useBiometric = it[CustomListItemModel.useBiometric]
+                    ),
+                    CustomListModel
+                        .selectAll()
+                        .where { CustomListModel.uuid eq it[CustomListItemModel.uuid] }
+                        .map {
+                            CustomListInfo(
+                                uniqueId = it[CustomListModel.uniqueId],
+                                uuid = it[CustomListModel.uuid],
+                                title = it[CustomListModel.title],
+                                description = it[CustomListModel.description],
+                                url = it[CustomListModel.url],
+                                imageUrl = it[CustomListModel.imageUrl],
+                                source = it[CustomListModel.sources]
+                            )
+                        }
+                )
+            }
+    }
 }
 
 @Serializable

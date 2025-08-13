@@ -62,7 +62,12 @@ suspend fun Application.configureDatabases() {
                     //.shareIn(this, SharingStarted.WhileSubscribed())
                     .collect { data ->
                         println("Sending SSE: $data")
-                        send(ServerSentEvent(data = Json.encodeToString(data), event = "data-event"))
+                        send(
+                            ServerSentEvent(
+                                data = Json.encodeToString(data),
+                                event = data.eventType.toString()
+                            )
+                        )
                     }
             } catch (e: Exception) {
                 log.error("Error during SSE collection: ${e.message}")
@@ -107,6 +112,12 @@ private fun Routing.lists(listSchema: ListSchema, updateLocal: MutableSharedFlow
         call.respond(HttpStatusCode.OK, list)
     }
 
+    get("/otaku/list/{id}") {
+        val id = call.parameters["id"] ?: throw IllegalArgumentException("Invalid id")
+        val list = listSchema.getListByUuid(id)
+        call.respond(HttpStatusCode.OK, list)
+    }
+
     delete("/otaku/lists/{id}") {
         val id = call.parameters["id"] ?: throw IllegalArgumentException("Invalid id")
         val items = listSchema.deleteList(id)
@@ -135,6 +146,14 @@ private fun Routing.favorites(
         updateLocal.emit(CustomSSE.AddEvent(EventType.NEW_FAVORITE, model.url))
     }
 
+    get("/otaku/favorites/item") {
+        val model = call.receive<String>()
+        println(model)
+        val inserting = userService.getFavorite(model)
+        println(inserting)
+        call.respond(inserting)
+    }
+
     get("/otaku/favorites/{type}") {
         val type = call.parameters["type"] ?: throw IllegalArgumentException("Invalid type")
         val models = userService.getModels(type)
@@ -146,6 +165,12 @@ private fun Routing.favorites(
         val numberDeleted = userService.deleteModel(url)
         call.respond(HttpStatusCode.OK, DeleteCount(numberDeleted))
         updateLocal.emit(CustomSSE.DeleteEvent(EventType.DELETE_FAVORITE, url))
+    }
+
+    get("/otaku/chapters/item") {
+        val url = call.receive<String>()
+        val chapterWatched = userService.getChapterWatchedUrl(url)
+        call.respond(chapterWatched)
     }
 
     post("/otaku/chapters") {
@@ -174,15 +199,17 @@ data class DeleteCount(val count: Int)
 
 @Serializable
 sealed class CustomSSE {
+    abstract val eventType: EventType
+
     @Serializable
     data class DeleteEvent(
-        val event: EventType,
+        override val eventType: EventType,
         val id: String,
     ) : CustomSSE()
 
     @Serializable
     data class AddEvent(
-        val event: EventType,
+        override val eventType: EventType,
         val id: String,
     ) : CustomSSE()
 }
