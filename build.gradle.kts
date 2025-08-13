@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.r2dbc)
+    implementation("io.r2dbc:r2dbc-h2:1.0.0.RELEASE")
     implementation(libs.h2)
     implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.server.call.id)
@@ -29,6 +31,7 @@ dependencies {
     implementation(libs.ktor.server.netty)
     implementation(libs.logback.classic)
     implementation(libs.ktor.server.config.yaml)
+    implementation(libs.ktor.server.sent.events)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test.junit)
 }

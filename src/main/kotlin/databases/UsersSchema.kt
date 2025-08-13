@@ -1,10 +1,13 @@
 package com.programmersbox.otakuworld.databases
 
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.upsert
 
-class UserService(database: Database) : GenericSchema() {
+class UserService : GenericSchema() {
     object DbModels : Table() {
         val url = varchar("url", length = 200)
         val title = varchar("title", length = 200)

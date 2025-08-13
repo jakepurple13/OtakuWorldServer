@@ -1,14 +1,17 @@
 package com.programmersbox.otakuworld.databases
 
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-class ListSchema(database: Database) : GenericSchema() {
+class ListSchema : GenericSchema() {
 
     object CustomListItemModel : Table() {
         val uuid = varchar("uuid", 200)
@@ -51,17 +54,20 @@ class ListSchema(database: Database) : GenericSchema() {
     }
 
     suspend fun getList(uniqueId: String) = dbQuery {
-        CustomListModel.selectAll().where { CustomListModel.uniqueId eq uniqueId }.map {
-            CustomListInfo(
-                uniqueId = it[CustomListModel.uniqueId],
-                uuid = it[CustomListModel.uuid],
-                title = it[CustomListModel.title],
-                description = it[CustomListModel.description],
-                url = it[CustomListModel.url],
-                imageUrl = it[CustomListModel.imageUrl],
-                source = it[CustomListModel.sources],
-            )
-        }
+        CustomListModel
+            .selectAll()
+            .where { CustomListModel.uniqueId eq uniqueId }
+            .map {
+                CustomListInfo(
+                    uniqueId = it[CustomListModel.uniqueId],
+                    uuid = it[CustomListModel.uuid],
+                    title = it[CustomListModel.title],
+                    description = it[CustomListModel.description],
+                    url = it[CustomListModel.url],
+                    imageUrl = it[CustomListModel.imageUrl],
+                    source = it[CustomListModel.sources],
+                )
+            }
     }
 
     suspend fun deleteList(uniqueId: String) = dbQuery {
