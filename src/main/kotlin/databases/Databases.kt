@@ -9,12 +9,15 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
 import io.ktor.sse.*
+import io.ktor.util.logging.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.net.InetAddress
+import java.net.NetworkInterface
 import kotlin.time.Duration.Companion.seconds
 
 suspend fun Application.configureDatabases() {
@@ -41,49 +44,54 @@ suspend fun Application.configureDatabases() {
         )
     }
 
+    //println(getIP())
+
     install(SSE)
 
     routing {
         //Use this for authentication
         /*authenticate {
-            favorites(UserService(database))
-            lists(ListSchema(database))
+            databasing(log = log)
         }*/
 
-        val updateLocal = MutableSharedFlow<CustomSSE>(0)
-
-        sse("/otaku/sse") {
-            println("Connected to SSE")
-            heartbeat {
-                period = 10000.seconds
-            }
-            try {
-                updateLocal
-                    //.shareIn(this, SharingStarted.WhileSubscribed())
-                    .collect { data ->
-                        println("Sending SSE: $data")
-                        send(
-                            ServerSentEvent(
-                                data = Json.encodeToString(data),
-                                event = data.eventType.toString()
-                            )
-                        )
-                    }
-            } catch (e: Exception) {
-                log.error("Error during SSE collection: ${e.message}")
-            }
-            println("Disconnected from SSE")
-        }
-
-        favorites(
-            userService = UserService(),
-            updateLocal = updateLocal
-        )
-        lists(
-            listSchema = ListSchema(),
-            updateLocal = updateLocal
-        )
+        databasing(log = log)
     }
+}
+
+private fun Routing.databasing(log: Logger) {
+    val updateLocal = MutableSharedFlow<CustomSSE>(0)
+
+    sse("/otaku/sse") {
+        println("Connected to SSE")
+        heartbeat {
+            period = 10000.seconds
+        }
+        try {
+            updateLocal
+                //.shareIn(this, SharingStarted.WhileSubscribed())
+                .collect { data ->
+                    println("Sending SSE: $data")
+                    send(
+                        ServerSentEvent(
+                            data = Json.encodeToString(data),
+                            event = data.eventType.toString()
+                        )
+                    )
+                }
+        } catch (e: Exception) {
+            log.error("Error during SSE collection: ${e.message}")
+        }
+        println("Disconnected from SSE")
+    }
+
+    favorites(
+        userService = UserService(),
+        updateLocal = updateLocal
+    )
+    lists(
+        listSchema = ListSchema(),
+        updateLocal = updateLocal
+    )
 }
 
 private fun Routing.lists(listSchema: ListSchema, updateLocal: MutableSharedFlow<CustomSSE>) {
@@ -223,4 +231,23 @@ enum class EventType {
     REMOVE_LIST,
     ADD_LIST_ITEM,
     REMOVE_LIST_ITEM,
+}
+
+fun getIP(): String? {
+    var result: InetAddress? = null
+    val interfaces = NetworkInterface.getNetworkInterfaces()
+    while (interfaces.hasMoreElements()) {
+        val addresses = interfaces.nextElement().inetAddresses
+        while (addresses.hasMoreElements()) {
+            val address = addresses.nextElement()
+            if (!address.isLoopbackAddress) {
+                if (address.isSiteLocalAddress) {
+                    return address.hostAddress
+                } else if (result == null) {
+                    result = address
+                }
+            }
+        }
+    }
+    return (result ?: InetAddress.getLocalHost()).hostAddress
 }
