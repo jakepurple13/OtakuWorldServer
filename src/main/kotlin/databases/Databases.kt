@@ -20,7 +20,7 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 import kotlin.time.Duration.Companion.seconds
 
-suspend fun Application.configureDatabases() {
+fun Application.configureDatabases() {
     //Modify this for choice of database and where it is located
     /*val database = R2dbcDatabase.connect(
         url = "r2dbc:h2:mem:///test",
@@ -120,6 +120,21 @@ private fun Routing.lists(listSchema: ListSchema, updateLocal: MutableSharedFlow
         call.respond(HttpStatusCode.OK, list)
     }
 
+    patch("/otaku/lists") {
+        val list = call.receive<CustomListItem>()
+        listSchema.createList(list)
+        call.respond(HttpStatusCode.Accepted)
+        updateLocal.emit(CustomSSE.AddEvent(EventType.ADD_LIST_ITEM, list.uuid))
+    }
+
+    patch("/otaku/lists/biometric/{id}") {
+        val id = call.parameters["id"] ?: throw IllegalArgumentException("Invalid id")
+        val useBiometric = call.receive<Biometric>().useBiometric
+        listSchema.updateBiometric(id, useBiometric)
+        call.respond(HttpStatusCode.Accepted)
+        updateLocal.emit(CustomSSE.AddEvent(EventType.ADD_LIST_ITEM, id))
+    }
+
     get("/otaku/list/{id}") {
         val id = call.parameters["id"] ?: throw IllegalArgumentException("Invalid id")
         val list = listSchema.getListByUuid(id)
@@ -140,6 +155,9 @@ private fun Routing.lists(listSchema: ListSchema, updateLocal: MutableSharedFlow
         updateLocal.emit(CustomSSE.DeleteEvent(EventType.REMOVE_LIST, id))
     }
 }
+
+@Serializable
+data class Biometric(val useBiometric: Boolean)
 
 private fun Routing.favorites(
     userService: UserService,
