@@ -16,7 +16,7 @@ class ListSchema : GenericSchema() {
 
     object CustomListItemModel : Table() {
         val uuid = varchar("uuid", 200)
-        val name = varchar("name", 200)
+        val name = text("name")
         val time = long("time")
         val useBiometric = bool("useBiometric")
 
@@ -26,10 +26,10 @@ class ListSchema : GenericSchema() {
     object CustomListModel : Table() {
         val uniqueId = varchar("uniqueId", 200)
         val uuid = varchar("uuid", 200)
-        val title = varchar("title", 200)
-        val description = varchar("description", 1000)
-        val url = varchar("url", 200)
-        val imageUrl = varchar("imageUrl", 300)
+        val title = text("title")
+        val description = text("description")
+        val url = text("url")
+        val imageUrl = text("imageUrl").nullable()
         val sources = varchar("sources", 200)
 
         override val primaryKey: PrimaryKey = PrimaryKey(uniqueId)
@@ -58,6 +58,8 @@ class ListSchema : GenericSchema() {
             it[title] = list.title
             it[description] = list.description
             it[url] = list.url
+            it[imageUrl] = list.imageUrl
+            it[sources] = list.source
         }
     }
 
@@ -72,7 +74,7 @@ class ListSchema : GenericSchema() {
                     title = it[CustomListModel.title],
                     description = it[CustomListModel.description],
                     url = it[CustomListModel.url],
-                    imageUrl = it[CustomListModel.imageUrl],
+                    imageUrl = it[CustomListModel.imageUrl].orEmpty(),
                     source = it[CustomListModel.sources],
                 )
             }
@@ -110,7 +112,7 @@ class ListSchema : GenericSchema() {
                                 title = it[CustomListModel.title],
                                 description = it[CustomListModel.description],
                                 url = it[CustomListModel.url],
-                                imageUrl = it[CustomListModel.imageUrl],
+                                imageUrl = it[CustomListModel.imageUrl].orEmpty(),
                                 source = it[CustomListModel.sources]
                             )
                         }
@@ -156,7 +158,7 @@ class ListSchema : GenericSchema() {
                                 title = it[CustomListModel.title],
                                 description = it[CustomListModel.description],
                                 url = it[CustomListModel.url],
-                                imageUrl = it[CustomListModel.imageUrl],
+                                imageUrl = it[CustomListModel.imageUrl].orEmpty(),
                                 source = it[CustomListModel.sources]
                             )
                         }

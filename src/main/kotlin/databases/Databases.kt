@@ -28,8 +28,15 @@ fun Application.configureDatabases() {
         //driver = "org.h2.Driver",
         //password = "",
     )*/
-    val database = Database.connect(
+    /*val database = Database.connect(
         url = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1",
+        user = "root",
+        driver = "org.h2.Driver",
+        password = "",
+    )*/
+
+    val database = Database.connect(
+        url = "jdbc:h2:./myh2file:test;DB_CLOSE_DELAY=-1",
         user = "root",
         driver = "org.h2.Driver",
         password = "",
@@ -70,7 +77,7 @@ private fun Routing.databasing(log: Logger) {
             updateLocal
                 //.shareIn(this, SharingStarted.WhileSubscribed())
                 .collect { data ->
-                    println("Sending SSE: $data")
+                    //println("Sending SSE: $data")
                     send(
                         ServerSentEvent(
                             data = Json.encodeToString(data),
@@ -165,18 +172,18 @@ private fun Routing.favorites(
 ) {
     post("/otaku/favorites") {
         val model = call.receive<DbModel>()
-        println(model)
+        //println(model)
         val inserting = userService.create(model)
-        println(inserting)
+        //println(inserting)
         call.respond(HttpStatusCode.Created)
         updateLocal.emit(CustomSSE.AddEvent(EventType.NEW_FAVORITE, model.url))
     }
 
     get("/otaku/favorites/item") {
         val model = call.receive<String>()
-        println(model)
+        //println(model)
         val inserting = userService.getFavorite(model)
-        println(inserting)
+        //println(inserting)
         call.respond(inserting)
     }
 

@@ -9,10 +9,10 @@ import org.jetbrains.exposed.v1.jdbc.upsert
 
 class UserService : GenericSchema() {
     object DbModels : Table() {
-        val url = varchar("url", length = 200)
-        val title = varchar("title", length = 200)
-        val description = varchar("description", length = 1000)
-        val imageUrl = varchar("imageUrl", length = 300)
+        val url = text("url")
+        val title = text("title")
+        val description = text("description")
+        val imageUrl = text("imageUrl")
         val sources = varchar("sources", length = 200)
         val numChapters = integer("numChapters")
         val shouldCheckForUpdate = bool("shouldCheckForUpdate")
@@ -22,9 +22,9 @@ class UserService : GenericSchema() {
     }
 
     object ChapterWatchedModels : Table() {
-        val url = varchar("url", length = 200)
-        val name = varchar("name", length = 200)
-        val favoriteUrl = varchar("favoriteUrl", length = 200)
+        val url = text("url")
+        val name = text("name")
+        val favoriteUrl = text("favoriteUrl")
 
         override val primaryKey: PrimaryKey = PrimaryKey(url)
     }
