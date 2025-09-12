@@ -16,6 +16,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.io.File
 import java.net.InetAddress
 import java.net.NetworkInterface
 import kotlin.time.Duration.Companion.seconds
@@ -34,6 +35,18 @@ fun Application.configureDatabases() {
         driver = "org.h2.Driver",
         password = "",
     )*/
+
+    val lastTimeUpdatedFile = File("lastTimeUpdated.txt")
+    if (!lastTimeUpdatedFile.exists()) lastTimeUpdatedFile.createNewFile()
+    fun getLastTimeUpdated() = runCatching {
+        lastTimeUpdatedFile
+            .readText()
+            .toLongOrNull()
+    }.getOrNull() ?: 0L
+
+    fun setLastTimeUpdated() {
+        lastTimeUpdatedFile.writeText(System.currentTimeMillis().toString())
+    }
 
     val database = Database.connect(
         url = "jdbc:h2:./myh2file:test;DB_CLOSE_DELAY=-1",
@@ -61,11 +74,19 @@ fun Application.configureDatabases() {
             databasing(log = log)
         }*/
 
-        databasing(log = log)
+        databasing(
+            log = log,
+            onFavoritesUpdated = ::setLastTimeUpdated,
+            getLastTimeUpdated = ::getLastTimeUpdated
+        )
     }
 }
 
-private fun Routing.databasing(log: Logger) {
+private fun Routing.databasing(
+    log: Logger,
+    onFavoritesUpdated: () -> Unit,
+    getLastTimeUpdated: () -> Long,
+) {
     val updateLocal = MutableSharedFlow<CustomSSE>(0)
 
     sse("/otaku/sse") {
@@ -93,7 +114,9 @@ private fun Routing.databasing(log: Logger) {
 
     favorites(
         userService = UserService(),
-        updateLocal = updateLocal
+        updateLocal = updateLocal,
+        onFavoritesUpdated = onFavoritesUpdated,
+        getLastTimeUpdated = getLastTimeUpdated
     )
     lists(
         listSchema = ListSchema(),
@@ -169,11 +192,15 @@ data class Biometric(val useBiometric: Boolean)
 private fun Routing.favorites(
     userService: UserService,
     updateLocal: MutableSharedFlow<CustomSSE>,
+    onFavoritesUpdated: () -> Unit,
+    getLastTimeUpdated: () -> Long,
 ) {
     post("/otaku/favorites") {
+        println("Inserting")
         val model = call.receive<DbModel>()
         //println(model)
         val inserting = userService.create(model)
+        onFavoritesUpdated()
         //println(inserting)
         call.respond(HttpStatusCode.Created)
         updateLocal.emit(CustomSSE.AddEvent(EventType.NEW_FAVORITE, model.url))
@@ -188,14 +215,16 @@ private fun Routing.favorites(
     }
 
     get("/otaku/favorites/{type}") {
+        println("Getting favorites")
         val type = call.parameters["type"] ?: throw IllegalArgumentException("Invalid type")
         val models = userService.getModels(type)
-        call.respond(HttpStatusCode.OK, models)
+        call.respond(HttpStatusCode.OK, FavoritesData(getLastTimeUpdated(), models))
     }
 
     delete("/otaku/favorites") {
         val url = call.receive<DbModel>().url
         val numberDeleted = userService.deleteModel(url)
+        onFavoritesUpdated()
         call.respond(HttpStatusCode.OK, DeleteCount(numberDeleted))
         updateLocal.emit(CustomSSE.DeleteEvent(EventType.DELETE_FAVORITE, url))
     }
@@ -276,3 +305,9 @@ fun getIP(): String? {
     }
     return (result ?: InetAddress.getLocalHost()).hostAddress
 }
+
+@Serializable
+data class FavoritesData(
+    val lastTimeUpdated: Long,
+    val favorites: List<DbModel>,
+)
