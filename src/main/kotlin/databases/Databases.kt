@@ -140,6 +140,7 @@ private fun Routing.lists(listSchema: ListSchema, updateLocal: MutableSharedFlow
     }
 
     get("/otaku/lists") {
+        println("Lists")
         val list = listSchema.getAllLists()
         call.respond(HttpStatusCode.OK, list)
     }
@@ -204,6 +205,18 @@ private fun Routing.favorites(
         //println(inserting)
         call.respond(HttpStatusCode.Created)
         updateLocal.emit(CustomSSE.AddEvent(EventType.NEW_FAVORITE, model.url))
+    }
+
+    post("/otaku/favoritesAll") {
+        println("Inserting")
+        val model = call.receive<List<DbModel>>()
+        println("${model.size}")
+        //println(model)
+        val inserting = userService.batchUpsert(model)
+        onFavoritesUpdated()
+        //println(inserting)
+        call.respond(HttpStatusCode.Created)
+        updateLocal.emit(CustomSSE.AddEvent(EventType.NEW_FAVORITE, model.toString()))
     }
 
     get("/otaku/favorites/item") {

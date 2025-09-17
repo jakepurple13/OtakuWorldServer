@@ -3,6 +3,7 @@ package com.programmersbox.otakuworld.databases
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.jdbc.batchUpsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -40,6 +41,19 @@ class UserService : GenericSchema() {
             it[shouldCheckForUpdate] = model.shouldCheckForUpdate
             it[type] = model.type
         }[DbModels.url]
+    }
+
+    suspend fun batchUpsert(models: List<DbModel>) = dbQuery {
+        DbModels.batchUpsert(models) { model ->
+            this[DbModels.url] = model.url
+            this[DbModels.title] = model.title
+            this[DbModels.description] = model.description
+            this[DbModels.imageUrl] = model.imageUrl
+            this[DbModels.sources] = model.source
+            this[DbModels.numChapters] = model.numChapters
+            this[DbModels.shouldCheckForUpdate] = model.shouldCheckForUpdate
+            this[DbModels.type] = model.type
+        }.size
     }
 
     suspend fun getModels(type: String): List<DbModel> = dbQuery {
